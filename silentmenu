@@ -1,94 +1,69 @@
--- Gui to Lua
--- Version: 3.2
+--> VARIABLES <--
+local plrs = game:GetService("Players")
+local plr = plrs.LocalPlayer
+local mouse = plr:GetMouse()
+local camera = game:GetService("Workspace").CurrentCamera
 
--- Instances:
+--> FUNCTIONS <--
+function notBehindWall(target)
+    local ray = Ray.new(plr.Character.Head.Position, (target.Position - plr.Character.Head.Position).Unit * 300)
+    local part, position = game:GetService("Workspace"):FindPartOnRayWithIgnoreList(ray, {plr.Character}, false, true)
+    if part then
+        local humanoid = part.Parent:FindFirstChildOfClass("Humanoid")
+        if not humanoid then
+            humanoid = part.Parent.Parent:FindFirstChildOfClass("Humanoid")
+        end
+        if humanoid and target and humanoid.Parent == target.Parent then
+            local pos, visible = camera:WorldToScreenPoint(target.Position)
+            if visible then
+                return true
+            end
+        end
+    end
+end
 
-local ScreenGui = Instance.new("ScreenGui")
-local aim = Instance.new("Frame")
-local TextLabel = Instance.new("TextLabel")
-local toggle = Instance.new("TextButton")
-local UIAspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
-local UICorner = Instance.new("UICorner")
-local seb = Instance.new("TextLabel")
-local exit = Instance.new("TextButton")
-local current = Instance.new("TextLabel")
+function getPlayerClosestToMouse()
+    local target = nil
+    local maxDist = 100
+    for _,v in pairs(plrs:GetPlayers()) do
+        if v.Character then
+            if v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health ~= 0 and v.Character:FindFirstChild("HumanoidRootPart") and v.TeamColor ~= plr.TeamColor then
+                local pos, vis = camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                local dist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(pos.X, pos.Y)).magnitude
+                if dist < maxDist and vis then
+                    local torsoPos = camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                    local torsoDist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(torsoPos.X, torsoPos.Y)).magnitude
+                    local headPos = camera:WorldToViewportPoint(v.Character.Head.Position)
+                    local headDist = (Vector2.new(mouse.X, mouse.Y) - Vector2.new(headPos.X, headPos.Y)).magnitude
+                    if torsoDist > headDist then
+                        if notBehindWall(v.Character.Head) then
+                            target = v.Character.Head
+                        end
+                    else
+                        if notBehindWall(v.Character.HumanoidRootPart) then
+                            target = v.Character.HumanoidRootPart
+                        end
+                    end
+                    maxDist = dist
+                end
+            end
+        end
+    end
+    return target
+end
 
---Properties:
+--> Hooking to the remote <--
+local gmt = getrawmetatable(game)
+setreadonly(gmt, false)
+local oldNamecall = gmt.__namecall
 
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-aim.Name = "aim"
-aim.Parent = ScreenGui
-aim.BackgroundColor3 = Color3.fromRGB(29, 29, 29)
-aim.BorderColor3 = Color3.fromRGB(29, 29, 29)
-aim.Position = UDim2.new(0.0112675875, 0, 0.593247592, 0)
-aim.Size = UDim2.new(0, 173, 0, 233)
-
-TextLabel.Parent = aim
-TextLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.BackgroundTransparency = 1.000
-TextLabel.Size = UDim2.new(0, 173, 0, 42)
-TextLabel.Font = Enum.Font.SourceSansItalic
-TextLabel.Text = "Silent Aim Menu | GLOOP"
-TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.TextSize = 19.000
-TextLabel.TextWrapped = true
-
-toggle.Name = "toggle"
-toggle.Parent = aim
-toggle.BackgroundColor3 = Color3.fromRGB(202, 0, 0)
-toggle.Position = UDim2.new(0.352601171, 0, 0.214592278, 0)
-toggle.Size = UDim2.new(0, 173, 0, 50)
-toggle.Font = Enum.Font.SourceSans
-toggle.Text = ""
-toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
-toggle.TextSize = 14.000
-toggle.TextTransparency = 1.000
-toggle.MouseButton1Down:connect(function()
-	loadstring(game:HttpGet('https://raw.githubusercontent.com/drexydev/scripts/main/silent'))()
+gmt.__namecall = newcclosure(function(self, ...)
+    local Args = {...}
+    local method = getnamecallmethod()
+    if tostring(self) == "HitPart" and tostring(method) == "FireServer" then
+        Args[1] = getPlayerClosestToMouse()
+        Args[2] = getPlayerClosestToMouse().Position
+        return self.FireServer(self, unpack(Args))
+    end
+    return oldNamecall(self, ...)
 end)
-
-UIAspectRatioConstraint.Parent = toggle
-
-UICorner.Parent = toggle
-
-seb.Name = "seb"
-seb.Parent = aim
-seb.BackgroundColor3 = Color3.fromRGB(202, 0, 0)
-seb.BackgroundTransparency = 1.000
-seb.Position = UDim2.new(0.0924855471, 0, 0.42719987, 0)
-seb.Size = UDim2.new(0, 140, 0, 40)
-seb.Font = Enum.Font.SourceSansBold
-seb.Text = "off"
-seb.TextColor3 = Color3.fromRGB(202, 0, 0)
-seb.TextSize = 19.000
-seb.TextWrapped = true
-
-exit.Name = "exit"
-exit.Parent = aim
-exit.BackgroundColor3 = Color3.fromRGB(108, 108, 108)
-exit.BackgroundTransparency = 1.000
-exit.Position = UDim2.new(0.219424665, 0, 0.851794839, 0)
-exit.Size = UDim2.new(0, 96, 0, 28)
-exit.Font = Enum.Font.SourceSans
-exit.Text = "X"
-exit.TextColor3 = Color3.fromRGB(255, 255, 255)
-exit.TextSize = 24.000
-exit.MouseButton1Down:connect(function()
-	ScreenGui:Destroy()
-end)
-
-current.Name = "current"
-current.Parent = aim
-current.BackgroundColor3 = Color3.fromRGB(202, 0, 0)
-current.BackgroundTransparency = 1.000
-current.Position = UDim2.new(-0.00578034669, 0, 0.594581962, 0)
-current.Size = UDim2.new(0, 173, 0, 27)
-current.Font = Enum.Font.SourceSansBold
-current.Text = "Current Aim: Head"
-current.TextColor3 = Color3.fromRGB(202, 202, 202)
-current.TextSize = 19.000
-current.TextWrapped = true
-
-warn("silent loaded | GLOOP")
