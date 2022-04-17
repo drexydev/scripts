@@ -334,7 +334,8 @@ do
 
 	--open/close gui
 	game:GetService("UserInputService").InputBegan:connect(function(input, gameProcessed)
-		if input.KeyCode == Enum.KeyCode.KeypadOne then
+		if input.
+		Code == Enum.KeyCode.V then
 			if not gameProcessed then
 				age1.Enabled = not age1.Enabled
 			end
